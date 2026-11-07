@@ -58,7 +58,7 @@ struct AppTile: View {
     var body: some View {
         Button(action: action) {
             VStack(spacing: 8) {
-                TVImage(url: point.iconURL, fallbackSymbol: "app.fill")
+                TVImage(urls: point.iconURLs, fallbackSymbol: "app.fill")
                     .frame(width: 64, height: 64)
                     .padding(10)
                     .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Theme.card))

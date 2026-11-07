@@ -48,14 +48,25 @@ nonisolated struct TVInfo: Equatable, Sendable {
 nonisolated struct LaunchPoint: Identifiable, Hashable, Sendable {
     let id: String          // appId
     let title: String
-    let iconURL: URL?
+    /// Every icon the TV advertised, best first. Fields differ between firmware versions
+    /// and some contain filesystem paths, so the loader tries them in order.
+    let iconURLs: [URL]
+    var iconURL: URL? { iconURLs.first }
 
     init?(_ json: JSONValue) {
         guard let id = json["id"]?.string, let title = json["title"]?.string else { return nil }
         self.id = id
         self.title = title
-        let icon = json["mediumLargeIcon"]?.string ?? json["largeIcon"]?.string ?? json["icon"]?.string
-        self.iconURL = icon.flatMap(URL.init(string:))
+        let raw = ["largeIcon", "icon", "mediumLargeIcon", "extraLargeIcon", "miniicon"]
+            .compactMap { json[$0]?.string }
+            .filter { !$0.isEmpty }
+        var urls: [URL] = []
+        // Prefer values that are already web URLs; bare paths come after.
+        for value in raw.filter({ $0.hasPrefix("http") }) + raw.filter({ !$0.hasPrefix("http") }) {
+            let encoded = value.addingPercentEncoding(withAllowedCharacters: .urlFragmentAllowed) ?? value
+            if let url = URL(string: value) ?? URL(string: encoded), !urls.contains(url) { urls.append(url) }
+        }
+        self.iconURLs = urls
     }
 }
 

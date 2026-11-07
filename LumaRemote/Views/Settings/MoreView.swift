@@ -42,7 +42,7 @@ struct MoreView: View {
             .listRowBackground(Theme.card)
 
             Section {
-                NavigationLink { PreferencesView() } label: { row("slider.horizontal.3", "Preferences", "Haptics, keys, typing") }
+                NavigationLink { PreferencesView() } label: { row("slider.horizontal.3", "Preferences", "Shortcuts, haptics, keys, typing") }
                 NavigationLink { RemoteMappingView() } label: { row("av.remote", "Physical Remote Mapping", "AKB75675304 key support") }
                 NavigationLink { HelpView() } label: { row("questionmark.circle", "Help & Troubleshooting", nil) }
                 NavigationLink { AboutView() } label: { row("sparkles", "About Luma Remote", nil) }
@@ -94,6 +94,20 @@ struct PreferencesView: View {
             }
             .listRowBackground(Theme.card)
             Section {
+                ForEach(0..<Preferences.shortcutSlotCount, id: \.self) { slot in
+                    NavigationLink {
+                        AppPickerView(slot: slot)
+                    } label: {
+                        LabeledContent("Shortcut \(slot + 1)", value: shortcutName(slot))
+                    }
+                }
+            } header: {
+                Text("Remote shortcuts")
+            } footer: {
+                Text("The two app buttons at the bottom of the remote. You can also touch and hold a shortcut on the remote to change it.")
+            }
+            .listRowBackground(Theme.card)
+            Section {
                 Toggle("Live typing", isOn: $prefs.liveTyping)
             } footer: {
                 Text("Mirror each keystroke to the TV as you type. Turn off to type first and send with one tap.")
@@ -102,5 +116,12 @@ struct PreferencesView: View {
         }
         .lumaScreen()
         .navigationTitle("Preferences")
+    }
+
+    private func shortcutName(_ slot: Int) -> String {
+        let ids = app.preferences.shortcutAppIDs
+        guard ids.indices.contains(slot), !ids[slot].isEmpty else { return "Empty" }
+        let id = ids[slot]
+        return app.service.launchPoints.first { $0.id == id }?.title ?? id
     }
 }

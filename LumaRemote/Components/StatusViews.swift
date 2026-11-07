@@ -68,8 +68,18 @@ struct ToastView: View {
 
 /// App icon / input icon served by the TV, with a graceful placeholder.
 struct TVImage: View {
-    let url: URL?
+    let urls: [URL]
     let fallbackSymbol: String
+
+    init(urls: [URL], fallbackSymbol: String) {
+        self.urls = urls
+        self.fallbackSymbol = fallbackSymbol
+    }
+
+    init(url: URL?, fallbackSymbol: String) {
+        self.init(urls: url.map { [$0] } ?? [], fallbackSymbol: fallbackSymbol)
+    }
+
     @Environment(AppModel.self) private var app
     @State private var image: UIImage?
 
@@ -83,9 +93,9 @@ struct TVImage: View {
                     .foregroundStyle(Theme.textSecondary)
             }
         }
-        .task(id: url) {
-            guard let url else { return }
-            image = await app.service.icon(for: url)
+        .task(id: urls) {
+            guard !urls.isEmpty else { return }
+            image = await app.service.icon(for: urls)
         }
     }
 }

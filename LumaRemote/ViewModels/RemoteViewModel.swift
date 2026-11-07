@@ -58,10 +58,27 @@ final class RemoteViewModel {
 
     var hasChannelControls: Bool { isVisible(.channelUp) || isVisible(.channelDown) }
 
-    /// Netflix / Prime Video shortcuts appear only if the TV lists them as installed.
-    var shortcutApps: [LaunchPoint] {
-        let wanted = ["netflix", "amazon"]
-        return wanted.compactMap { id in service.launchPoints.first { $0.id == id } }
+    /// Two user-chosen shortcut slots (Netflix and Prime Video by default). A slot is nil
+    /// when it's empty or its app isn't installed on this TV.
+    var shortcutSlots: [LaunchPoint?] {
+        preferences.shortcutAppIDs.map { id in
+            id.isEmpty ? nil : service.launchPoints.first { $0.id == id }
+        }
+    }
+
+    /// Show the shortcut row once the TV has shared its app list.
+    var showsShortcuts: Bool {
+        service.appsLoaded && capabilities.supports(.launchPoints) && !service.launchPoints.isEmpty
+    }
+
+    func setShortcut(slot: Int, appID: String?) {
+        guard preferences.shortcutAppIDs.indices.contains(slot) else { return }
+        var ids = preferences.shortcutAppIDs
+        if let appID, let other = ids.firstIndex(of: appID), other != slot {
+            ids[other] = ids[slot]          // picking an app already in the other slot swaps them
+        }
+        ids[slot] = appID ?? ""
+        preferences.shortcutAppIDs = ids
     }
 
     // MARK: Actions

@@ -64,6 +64,29 @@ struct ProtocolTests {
         #expect(input?.connected == true)
         #expect(input?.symbol == "cable.connector.horizontal")
     }
+
+    @Test func iconURLsPreferWebURLsAndKeepAll() {
+        let lp = LaunchPoint(["id": "netflix", "title": "Netflix",
+                              "largeIcon": "/mnt/apps/netflix/large.png",
+                              "icon": "http://192.168.1.54:3000/resources/abc/icon.png"])
+        #expect(lp?.iconURLs.count == 2)
+        #expect(lp?.iconURLs.first?.scheme == "http")
+    }
+
+    @Test func iconCandidatesRewriteToTVHostAndLivePort() {
+        let advertised = URL(string: "http://localhost:3000/resources/abc/icon.png?v=1")!
+        let urls = WebOSService.iconCandidates(for: advertised, tvHost: "192.168.1.54", preferSecure: true)
+        #expect(urls.map(\.absoluteString) == [
+            "https://192.168.1.54:3001/resources/abc/icon.png?v=1",
+            "http://192.168.1.54:3000/resources/abc/icon.png?v=1",
+        ])
+        let onTV = URL(string: "http://192.168.1.54:3000/resources/abc/icon.png")!
+        let plain = WebOSService.iconCandidates(for: onTV, tvHost: "192.168.1.54", preferSecure: false)
+        #expect(plain.first?.absoluteString == "http://192.168.1.54:3000/resources/abc/icon.png")
+        #expect(plain.count == 2)
+        let bare = WebOSService.iconCandidates(for: URL(string: "resources/x.png")!, tvHost: "10.0.0.5", preferSecure: true)
+        #expect(bare.first?.absoluteString == "https://10.0.0.5:3001/resources/x.png")
+    }
 }
 
 @Suite("Networking helpers")

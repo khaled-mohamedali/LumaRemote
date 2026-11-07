@@ -58,6 +58,8 @@ final class WebOSService {
     @ObservationIgnored private var hasConnectedThisSession = false
     @ObservationIgnored private var expectingPowerOff = false
     @ObservationIgnored private var iconCache: [URL: UIImage] = [:]
+    @ObservationIgnored private var iconTasks: [URL: Task<UIImage?, Never>] = [:]
+    @ObservationIgnored private var iconFailures: Set<URL> = []
 
     init(store: DeviceStore, keychain: KeychainStore, network: NetworkMonitor) {
         self.store = store
@@ -132,6 +134,9 @@ final class WebOSService {
         inputsLoaded = false
         endpoint = nil
         iconCache.removeAll()
+        iconTasks.values.forEach { $0.cancel() }
+        iconTasks.removeAll()
+        iconFailures.removeAll()
         capabilities.reset()
     }
 
@@ -649,13 +654,87 @@ final class WebOSService {
 
     // MARK: - Icons (served by the TV, possibly over its self-signed HTTPS)
 
-    func icon(for url: URL) async -> UIImage? {
-        if let cached = iconCache[url] { return cached }
-        guard let session, let host = device?.host, url.host == host else { return nil }
-        guard let result = try? await session.data(from: url),
-              (result.1 as? HTTPURLResponse)?.statusCode == 200,
-              let image = UIImage(data: result.0) else { return nil }
-        iconCache[url] = image
+    /// Loads an icon the TV advertised. Firmware often reports `http://<ip>:3000/…` even
+    /// when only the secure port 3001 is open, sometimes uses a host other than the TV's
+    /// IP, and some fields are bare paths. So for each advertised URL we try the same path
+    /// on the TV's IP over the scheme/port of the live connection first, then the others.
+    /// Results (including failures) are cached per TV connection and concurrent requests
+    /// for the same icon share one download.
+    func icon(for urls: [URL]) async -> UIImage? {
+        guard let key = urls.first else { return nil }
+        if let cached = iconCache[key] { return cached }
+        if iconFailures.contains(key) { return nil }
+        if let running = iconTasks[key] { return await running.value }
+        guard let session, let host = device?.host else { return nil }
+
+        let preferSecure = endpoint?.secure ?? true
+        let securePort = endpoint?.secure == true ? (endpoint?.port ?? 3001) : 3001
+        let plainPort = endpoint?.secure == false ? (endpoint?.port ?? 3000) : 3000
+        var candidates: [URL] = []
+        for url in urls {
+            for c in Self.iconCandidates(for: url, tvHost: host, preferSecure: preferSecure,
+                                         securePort: securePort, plainPort: plainPort)
+            where !candidates.contains(c) { candidates.append(c) }
+        }
+
+        let task = Task { () -> UIImage? in
+            for candidate in candidates {
+                var request = URLRequest(url: candidate, timeoutInterval: 6)
+                request.cachePolicy = .reloadIgnoringLocalCacheData
+                guard let result = try? await session.data(for: request),
+                      (result.1 as? HTTPURLResponse)?.statusCode == 200,
+                      let image = UIImage(data: result.0) else { continue }
+                return Self.downscaled(image, maxSide: 192)
+            }
+            return nil
+        }
+        iconTasks[key] = task
+        let image = await task.value
+        iconTasks[key] = nil
+        guard device?.host == host else { return image }   // switched TVs meanwhile
+        if let image {
+            iconCache[key] = image
+        } else {
+            iconFailures.insert(key)
+            Log.service.info("no icon could be loaded for \(key.lastPathComponent, privacy: .public)")
+        }
         return image
+    }
+
+    nonisolated static func iconCandidates(for url: URL, tvHost: String, preferSecure: Bool,
+                                           securePort: Int = 3001, plainPort: Int = 3000) -> [URL] {
+        let parsed = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        var path = parsed?.percentEncodedPath ?? url.path
+        guard !path.isEmpty else { return [] }
+        if !path.hasPrefix("/") { path = "/" + path }
+        let query = parsed?.percentEncodedQuery
+
+        func make(_ scheme: String, _ port: Int) -> URL? {
+            var c = URLComponents()
+            c.scheme = scheme
+            c.host = tvHost
+            c.port = port
+            c.percentEncodedPath = path
+            c.percentEncodedQuery = query
+            return c.url
+        }
+        var list: [URL] = []
+        let secure = make("https", securePort)
+        let plain = make("http", plainPort)
+        list += preferSecure ? [secure, plain].compactMap { $0 } : [plain, secure].compactMap { $0 }
+        // The URL exactly as advertised, if it points at the TV.
+        if url.host == tvHost, let scheme = url.scheme, scheme.hasPrefix("http"), !list.contains(url) {
+            list.insert(url, at: 1)
+        }
+        return list
+    }
+
+    nonisolated private static func downscaled(_ image: UIImage, maxSide: CGFloat) -> UIImage {
+        let size = image.size
+        let largest = max(size.width, size.height)
+        guard largest > maxSide, largest > 0 else { return image }
+        let scale = maxSide / largest
+        let target = CGSize(width: size.width * scale, height: size.height * scale)
+        return image.preparingThumbnail(of: target) ?? image
     }
 }

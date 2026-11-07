@@ -134,7 +134,7 @@ struct RemoteView: View {
 
         if vm.hasMediaControls { PlaybackBar() }
 
-        if !vm.shortcutApps.isEmpty { ShortcutRow(apps: vm.shortcutApps) }
+        if vm.showsShortcuts { ShortcutRow() }
     }
 
     private var volumeTitle: String {
@@ -173,27 +173,61 @@ struct PlaybackBar: View {
     }
 }
 
+/// Two customizable app shortcuts (Netflix and Prime Video by default, mirroring the
+/// AKB75675304's app buttons). Tap to open; long-press or tap an empty slot to choose.
 struct ShortcutRow: View {
-    let apps: [LaunchPoint]
     @Environment(AppModel.self) private var app
+    @State private var editingSlot: EditingSlot?
+
+    struct EditingSlot: Identifiable { let id: Int }
 
     var body: some View {
+        let slots = app.remote.shortcutSlots
         HStack(spacing: 12) {
-            ForEach(apps) { point in
-                Button { app.remote.launch(point) } label: {
-                    HStack(spacing: 10) {
-                        TVImage(url: point.iconURL, fallbackSymbol: "play.rectangle.fill")
-                            .frame(width: 28, height: 28)
-                            .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
-                        Text(point.title).font(.subheadline.weight(.semibold)).lineLimit(1)
+            ForEach(Array(slots.enumerated()), id: \.offset) { index, point in
+                if let point {
+                    Button { app.remote.launch(point) } label: {
+                        slotLabel {
+                            TVImage(urls: point.iconURLs, fallbackSymbol: "play.rectangle.fill")
+                                .frame(width: 28, height: 28)
+                                .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+                            Text(point.title).font(.subheadline.weight(.semibold)).lineLimit(1)
+                        }
                     }
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity, minHeight: 50)
-                    .card(radius: 16)
+                    .buttonStyle(KeyPressStyle())
+                    .contextMenu {
+                        Button { editingSlot = EditingSlot(id: index) } label: {
+                            Label("Change App…", systemImage: "arrow.left.arrow.right")
+                        }
+                        Button(role: .destructive) { app.remote.setShortcut(slot: index, appID: nil) } label: {
+                            Label("Remove Shortcut", systemImage: "minus.circle")
+                        }
+                    }
+                    .accessibilityLabel("Open \(point.title)")
+                    .accessibilityHint("Touch and hold to change this shortcut")
+                } else {
+                    Button { editingSlot = EditingSlot(id: index) } label: {
+                        slotLabel {
+                            Image(systemName: "plus.circle.fill").foregroundStyle(Theme.accent)
+                            Text("Choose App").font(.subheadline.weight(.semibold)).lineLimit(1)
+                        }
+                    }
+                    .buttonStyle(KeyPressStyle())
+                    .accessibilityLabel("Choose an app for shortcut \(index + 1)")
                 }
-                .buttonStyle(KeyPressStyle())
-                .accessibilityLabel("Open \(point.title)")
             }
         }
+        .sheet(item: $editingSlot) { slot in
+            NavigationStack { AppPickerView(slot: slot.id) }
+                .presentationDetents([.medium, .large])
+        }
+    }
+
+    private func slotLabel<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        HStack(spacing: 10) { content() }
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity, minHeight: 50)
+            .padding(.horizontal, 10)
+            .card(radius: 16)
     }
 }
