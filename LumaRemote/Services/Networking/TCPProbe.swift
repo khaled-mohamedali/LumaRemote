@@ -16,7 +16,7 @@ final class ResumeOnce<T: Sendable> {
 /// WebSocket time out) gives precise diagnostics: refused vs. silent vs. the user
 /// having denied Local Network access.
 enum TCPProbe {
-    enum Result: Sendable, Equatable {
+    nonisolated enum Result: Sendable, Equatable {
         case open
         case refused
         case timeout

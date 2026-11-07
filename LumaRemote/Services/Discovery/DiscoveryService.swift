@@ -61,7 +61,7 @@ final class DiscoveryService {
     private func startBonjour() {
         for type in ["_airplay._tcp", "_hap._tcp"] {
             let browser = NWBrowser(for: .bonjourWithTXTRecord(type: type, domain: nil), using: .tcp)
-            browser.browseResultsChangedHandler = { results, _ in
+            browser.browseResultsChangedHandler = { [weak self] results, _ in
                 let candidates: [(NWEndpoint, String, String)] = results.compactMap { result in
                     guard case .service(let name, _, _, _) = result.endpoint else { return nil }
                     var txt = ""
@@ -72,8 +72,9 @@ final class DiscoveryService {
                     guard haystack.contains("lg") || haystack.contains("webos") else { return nil }
                     return (result.endpoint, name, type)
                 }
-                Task { @MainActor [weak self] in
-                    for (endpoint, name, type) in candidates { self?.resolve(endpoint, name: name, source: type) }
+                guard let self, !candidates.isEmpty else { return }
+                Task { @MainActor in
+                    for (endpoint, name, type) in candidates { self.resolve(endpoint, name: name, source: type) }
                 }
             }
             browser.stateUpdateHandler = { state in
@@ -93,7 +94,7 @@ final class DiscoveryService {
             ip.version = .v4
         }
         let connection = NWConnection(to: endpoint, using: params)
-        connection.stateUpdateHandler = { state in
+        connection.stateUpdateHandler = { [weak self] state in
             switch state {
             case .ready:
                 var host: String?
@@ -101,8 +102,9 @@ final class DiscoveryService {
                     host = "\(address)".components(separatedBy: "%").first
                 }
                 connection.cancel()
-                Task { @MainActor [weak self] in
-                    if let host { await self?.confirm(host: host, name: name, source: "Bonjour") }
+                guard let self, let host else { return }
+                Task { @MainActor in
+                    await self.confirm(host: host, name: name, source: "Bonjour")
                 }
             case .failed, .waiting:
                 connection.cancel()
