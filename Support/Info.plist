@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Shown by iOS the first time Luma Remote talks to a device on your Wi-Fi. -->
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Luma Remote connects to your LG TV over your home Wi-Fi to send remote-control commands and to find TVs on your network. Nothing leaves your local network.</string>
+	<!-- Bonjour service types browsed during automatic discovery. -->
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_airplay._tcp</string>
+		<string>_hap._tcp</string>
+	</array>
+	<!-- The TV speaks plain ws:// on port 3000 (older firmware) and serves app icons over
+	     http://. This permits unencrypted connections to local-network addresses only. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+</dict>
+</plist>
