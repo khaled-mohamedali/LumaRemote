@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import Observation
 
 /// How the remote's centre area navigates the TV.
@@ -13,6 +14,34 @@ nonisolated enum NavigationStyle: String, CaseIterable, Sendable, Identifiable {
     var symbol: String { self == .buttons ? "circle.grid.cross" : "hand.draw" }
 }
 
+/// Light/dark appearance. `.system` follows the iPhone's setting.
+nonisolated enum AppearanceMode: String, CaseIterable, Sendable, Identifiable {
+    case system, light, dark
+
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .system: return "System"
+        case .light: return "Light"
+        case .dark: return "Dark"
+        }
+    }
+    var symbol: String {
+        switch self {
+        case .system: return "circle.lefthalf.filled"
+        case .light: return "sun.max.fill"
+        case .dark: return "moon.fill"
+        }
+    }
+    var interfaceStyle: UIUserInterfaceStyle {
+        switch self {
+        case .system: return .unspecified
+        case .light: return .light
+        case .dark: return .dark
+        }
+    }
+}
+
 /// Non-sensitive user preferences, stored in UserDefaults.
 @Observable
 final class Preferences {
@@ -21,6 +50,8 @@ final class Preferences {
     var liveTyping: Bool { didSet { defaults.set(liveTyping, forKey: "prefs.liveTyping") } }
     /// App IDs for the two shortcut buttons on the remote ("" = empty slot).
     var shortcutAppIDs: [String] { didSet { defaults.set(shortcutAppIDs, forKey: "prefs.shortcutApps") } }
+
+    var appearance: AppearanceMode { didSet { defaults.set(appearance.rawValue, forKey: "prefs.appearance") } }
 
     /// Shared by the main remote and the Keyboard screen.
     var navigationStyle: NavigationStyle { didSet { defaults.set(navigationStyle.rawValue, forKey: "prefs.navigationStyle") } }
@@ -41,6 +72,7 @@ final class Preferences {
         hapticsEnabled = defaults.bool(forKey: "prefs.haptics")
         showExperimentalKeys = defaults.bool(forKey: "prefs.experimentalKeys")
         liveTyping = defaults.bool(forKey: "prefs.liveTyping")
+        appearance = defaults.string(forKey: "prefs.appearance").flatMap(AppearanceMode.init(rawValue:)) ?? .system
         // "keyboard.navStyle" was the Keyboard screen's own setting in 1.1 ("swipe"/"buttons").
         let storedStyle = defaults.string(forKey: "prefs.navigationStyle") ?? defaults.string(forKey: "keyboard.navStyle")
         navigationStyle = storedStyle.flatMap(NavigationStyle.init(rawValue:)) ?? .buttons

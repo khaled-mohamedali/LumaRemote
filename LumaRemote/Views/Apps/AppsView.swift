@@ -68,7 +68,7 @@ struct AppTile: View {
                     )
                 Text(point.title)
                     .font(.caption.weight(.medium))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.textPrimary)
                     .lineLimit(2)
                     .multilineTextAlignment(.center)
             }

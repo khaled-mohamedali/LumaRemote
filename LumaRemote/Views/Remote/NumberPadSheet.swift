@@ -47,7 +47,7 @@ struct NumberPadSheet: View {
         Button { app.remote.press(key) } label: {
             Text(key.buttonName ?? "")
                 .font(.system(size: 26, weight: .medium, design: .rounded))
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.textPrimary)
                 .frame(maxWidth: .infinity, minHeight: 56)
                 .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Theme.keyGradient))
                 .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(Theme.stroke))

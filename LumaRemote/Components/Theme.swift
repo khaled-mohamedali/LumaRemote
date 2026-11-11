@@ -1,26 +1,63 @@
 import SwiftUI
 import UIKit
 
+/// Colours adapt to light and dark mode. Each token has a light and a dark value;
+/// iOS picks the right one from the current appearance (system, or the user's choice
+/// in Preferences), including inside sheets.
 enum Theme {
-    static let background = Color(red: 0.055, green: 0.055, blue: 0.071)      // #0E0E12
-    static let card = Color(red: 0.105, green: 0.105, blue: 0.133)            // #1B1B22
-    static let cardRaised = Color(red: 0.145, green: 0.145, blue: 0.180)      // #25252E
-    static let stroke = Color.white.opacity(0.06)
-    static let accent = Color(red: 0.616, green: 0.549, blue: 1.0)            // #9D8CFF
-    static let accentDeep = Color(red: 0.42, green: 0.33, blue: 0.93)
-    static let textPrimary = Color.white
-    static let textSecondary = Color(red: 0.62, green: 0.62, blue: 0.67)
-    static let power = Color(red: 1.0, green: 0.30, blue: 0.36)
-    static let success = Color(red: 0.30, green: 0.85, blue: 0.48)
-    static let warning = Color(red: 1.0, green: 0.74, blue: 0.28)
+    static let background = dynamic(light: 0xF2F2F7, dark: 0x0E0E12)
+    static let card = dynamic(light: 0xFFFFFF, dark: 0x1B1B22)
+    static let cardRaised = dynamic(light: 0xE8E8EF, dark: 0x25252E)
+    static let stroke = dynamic(light: 0x000000, lightAlpha: 0.08, dark: 0xFFFFFF, darkAlpha: 0.06)
+    /// Slightly deeper violet in light mode so it keeps contrast on white.
+    static let accent = dynamic(light: 0x6B57E8, dark: 0x9D8CFF)
+    static let accentDeep = dynamic(light: 0x5A44E0, dark: 0x6B54ED)
+    static let textPrimary = dynamic(light: 0x111114, dark: 0xFFFFFF)
+    static let textSecondary = dynamic(light: 0x6B6B76, dark: 0x9E9EAB)
+    static let power = dynamic(light: 0xE5303D, dark: 0xFF4D5C)
+    static let success = dynamic(light: 0x1F9D4D, dark: 0x4DD97A)
+    static let warning = dynamic(light: 0xC27400, dark: 0xFFBD47)
+    /// Shadows: deep in dark mode, soft in light mode.
+    static let shadow = dynamic(light: 0x000000, lightAlpha: 0.12, dark: 0x000000, darkAlpha: 0.45)
 
     static let keyGradient = LinearGradient(
-        colors: [Color(red: 0.17, green: 0.17, blue: 0.21), Color(red: 0.11, green: 0.11, blue: 0.14)],
+        colors: [dynamic(light: 0xFFFFFF, dark: 0x2B2B36), dynamic(light: 0xECECF2, dark: 0x1C1C24)],
         startPoint: .top, endPoint: .bottom)
 
     static let padGradient = LinearGradient(
-        colors: [Color(red: 0.16, green: 0.16, blue: 0.20), Color(red: 0.09, green: 0.09, blue: 0.12)],
+        colors: [dynamic(light: 0xFFFFFF, dark: 0x292933), dynamic(light: 0xE4E4EC, dark: 0x17171F)],
         startPoint: .topLeading, endPoint: .bottomTrailing)
+
+    nonisolated static func dynamic(light: UInt32, lightAlpha: CGFloat = 1, dark: UInt32, darkAlpha: CGFloat = 1) -> Color {
+        Color(uiColor: UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(hex: dark, alpha: darkAlpha)
+                : UIColor(hex: light, alpha: lightAlpha)
+        })
+    }
+}
+
+extension UIColor {
+    nonisolated convenience init(hex: UInt32, alpha: CGFloat = 1) {
+        self.init(red: CGFloat((hex >> 16) & 0xFF) / 255,
+                  green: CGFloat((hex >> 8) & 0xFF) / 255,
+                  blue: CGFloat(hex & 0xFF) / 255,
+                  alpha: alpha)
+    }
+}
+
+/// Applies the user's appearance choice to every window. Done at the UIKit level
+/// (rather than SwiftUI's preferredColorScheme) because that reliably switches back to
+/// "follow the system" and also restyles sheets that are already open.
+enum WindowAppearance {
+    static func apply(_ mode: AppearanceMode) {
+        for scene in UIApplication.shared.connectedScenes {
+            guard let windowScene = scene as? UIWindowScene else { continue }
+            for window in windowScene.windows {
+                window.overrideUserInterfaceStyle = mode.interfaceStyle
+            }
+        }
+    }
 }
 
 enum Haptics {

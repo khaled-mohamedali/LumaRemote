@@ -76,7 +76,7 @@ struct DevicesContent: View {
                 .frame(width: 40, height: 40)
                 .background(Circle().fill(Theme.accent.opacity(0.15)))
             VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.body.weight(.semibold)).foregroundStyle(.white)
+                Text(title).font(.body.weight(.semibold)).foregroundStyle(Theme.textPrimary)
                 Text(subtitle).font(.footnote).foregroundStyle(Theme.textSecondary)
                     .multilineTextAlignment(.leading)
             }
@@ -100,10 +100,10 @@ struct SavedDeviceRow: View {
                 HStack(spacing: 14) {
                     Image(systemName: "tv")
                         .font(.system(size: 22))
-                        .foregroundStyle(isCurrent ? Theme.accent : .white)
+                        .foregroundStyle(isCurrent ? Theme.accent : Theme.textPrimary)
                         .frame(width: 40)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(device.displayName).font(.body.weight(.semibold)).foregroundStyle(.white)
+                        Text(device.displayName).font(.body.weight(.semibold)).foregroundStyle(Theme.textPrimary)
                         Text([device.host, device.modelName].compactMap { $0 }.joined(separator: " · "))
                             .font(.footnote).foregroundStyle(Theme.textSecondary)
                         Text(statusLine(isCurrent: isCurrent))
@@ -153,7 +153,7 @@ struct DiscoveryResults: View {
                 HStack(spacing: 14) {
                     Image(systemName: "tv.badge.wifi").font(.system(size: 20)).foregroundStyle(Theme.accent).frame(width: 40)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(tv.name).font(.body.weight(.semibold)).foregroundStyle(.white)
+                        Text(tv.name).font(.body.weight(.semibold)).foregroundStyle(Theme.textPrimary)
                         Text([tv.host, tv.webOSVersion.map { "webOS \($0)" }, tv.source].compactMap { $0 }.joined(separator: " · "))
                             .font(.footnote).foregroundStyle(Theme.textSecondary)
                     }

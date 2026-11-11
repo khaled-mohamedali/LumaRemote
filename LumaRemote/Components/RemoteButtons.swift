@@ -13,7 +13,7 @@ struct KeyPressStyle: ButtonStyle {
 /// Round key (Power / Home / Mute / Back / …). 64pt keeps one-handed use comfortable.
 struct CircleKey<Label: View>: View {
     var size: CGFloat = 64
-    var tint: Color = .white
+    var tint: Color = Theme.textPrimary
     var highlighted = false
     var accessibilityLabel: String
     let action: () -> Void
@@ -26,7 +26,7 @@ struct CircleKey<Label: View>: View {
                 .frame(width: size, height: size)
                 .background(Circle().fill(Theme.keyGradient))
                 .overlay(Circle().strokeBorder(highlighted ? Theme.accent.opacity(0.8) : Theme.stroke, lineWidth: highlighted ? 1.5 : 1))
-                .shadow(color: .black.opacity(0.45), radius: 10, y: 6)
+                .shadow(color: Theme.shadow, radius: 10, y: 6)
                 .contentShape(Circle())
         }
         .buttonStyle(KeyPressStyle())
@@ -35,7 +35,7 @@ struct CircleKey<Label: View>: View {
 }
 
 extension CircleKey where Label == SymbolLabel {
-    init(symbol: String, size: CGFloat = 64, tint: Color = .white, highlighted: Bool = false,
+    init(symbol: String, size: CGFloat = 64, tint: Color = Theme.textPrimary, highlighted: Bool = false,
          accessibilityLabel: String, action: @escaping () -> Void) {
         self.size = size
         self.tint = tint
@@ -136,10 +136,10 @@ struct RockerControl: View {
                         .frame(width: 70, height: 58)
                 }
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(Theme.textPrimary)
             .background(Capsule().fill(Theme.keyGradient))
             .overlay(Capsule().strokeBorder(Theme.stroke))
-            .shadow(color: .black.opacity(0.45), radius: 10, y: 6)
+            .shadow(color: Theme.shadow, radius: 10, y: 6)
 
             Text(title)
                 .font(.caption.weight(.semibold))
@@ -161,7 +161,7 @@ struct PillKey: View {
                 Image(systemName: symbol).font(.system(size: 16, weight: .semibold))
                 Text(title).font(.system(size: 11, weight: .semibold))
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(Theme.textPrimary)
             .frame(width: 70, height: 54)
             .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.keyGradient))
             .overlay(alignment: .topTrailing) {

@@ -42,7 +42,7 @@ struct MoreView: View {
             .listRowBackground(Theme.card)
 
             Section {
-                NavigationLink { PreferencesView() } label: { row("slider.horizontal.3", "Preferences", "Shortcuts, haptics, keys, typing") }
+                NavigationLink { PreferencesView() } label: { row("slider.horizontal.3", "Preferences", "Appearance, shortcuts, haptics, keys") }
                 NavigationLink { RemoteMappingView() } label: { row("av.remote", "Physical Remote Mapping", "AKB75675304 key support") }
                 NavigationLink { HelpView() } label: { row("questionmark.circle", "Help & Troubleshooting", nil) }
                 NavigationLink { AboutView() } label: { row("sparkles", "About Luma Remote", nil) }
@@ -63,11 +63,11 @@ struct MoreView: View {
         HStack(spacing: 14) {
             Image(systemName: symbol)
                 .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.textPrimary)
                 .frame(width: 36, height: 36)
                 .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.cardRaised))
             VStack(alignment: .leading, spacing: 2) {
-                Text(title).foregroundStyle(.white)
+                Text(title).foregroundStyle(Theme.textPrimary)
                 if let subtitle {
                     Text(subtitle).font(.footnote).foregroundStyle(Theme.textSecondary).lineLimit(1)
                 }
@@ -83,6 +83,20 @@ struct PreferencesView: View {
     var body: some View {
         @Bindable var prefs = app.preferences
         Form {
+            Section {
+                Picker("Appearance", selection: $prefs.appearance) {
+                    ForEach(AppearanceMode.allCases) { mode in
+                        Label(mode.title, systemImage: mode.symbol).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+            } header: {
+                Text("Appearance")
+            } footer: {
+                Text("System follows your iPhone’s Light/Dark setting, including automatic switching at sunset.")
+            }
+            .listRowBackground(Theme.card)
+
             Section {
                 Toggle("Haptic feedback", isOn: $prefs.hapticsEnabled)
                 Picker("Navigation", selection: $prefs.navigationStyle) {

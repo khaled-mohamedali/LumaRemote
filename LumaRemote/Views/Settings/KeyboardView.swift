@@ -62,7 +62,7 @@ struct KeyboardView: View {
                 .frame(maxWidth: .infinity, minHeight: 50)
                 .background(RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .fill(vm.text.isEmpty ? Theme.cardRaised : Theme.accentDeep))
-                .foregroundStyle(.white)
+                .foregroundStyle(vm.text.isEmpty ? Theme.textSecondary : Color.white)
         }
         .buttonStyle(KeyPressStyle())
         .disabled(vm.text.trimmingCharacters(in: .whitespaces).isEmpty)
@@ -98,7 +98,7 @@ struct KeyboardView: View {
 
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 6) {
-                Text("Try a direct search").font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                Text("Try a direct search").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.textPrimary)
                 Text("EXPERIMENTAL")
                     .font(.caption2.weight(.bold))
                     .padding(.horizontal, 6).padding(.vertical, 2)
@@ -113,7 +113,7 @@ struct KeyboardView: View {
                 Label("Try search in \(name)", systemImage: "magnifyingglass")
                     .font(.subheadline.weight(.semibold))
                     .frame(maxWidth: .infinity, minHeight: 44)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.textPrimary)
                     .card(radius: 14)
             }
             .buttonStyle(KeyPressStyle())
@@ -149,7 +149,7 @@ struct KeyboardView: View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: symbol).font(.title3).foregroundStyle(Theme.accent)
             VStack(alignment: .leading, spacing: 4) {
-                Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(Theme.textPrimary)
                 Text(text).font(.footnote).foregroundStyle(Theme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -186,7 +186,7 @@ struct KeyboardView: View {
             Label(title, systemImage: symbol)
                 .font(.subheadline.weight(.semibold))
                 .frame(maxWidth: .infinity, minHeight: 48)
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.textPrimary)
                 .card(radius: 14)
         }
         .buttonStyle(KeyPressStyle())

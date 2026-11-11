@@ -10,12 +10,12 @@ struct DeviceCard: View {
             HStack(spacing: 16) {
                 Image(systemName: "tv")
                     .font(.system(size: 30, weight: .light))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.textPrimary)
                     .frame(width: 52)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(device?.displayName ?? "Choose a TV")
                         .font(.headline)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.textPrimary)
                         .lineLimit(1)
                     HStack(spacing: 6) {
                         if let model = app.service.info.modelName ?? device?.modelName {

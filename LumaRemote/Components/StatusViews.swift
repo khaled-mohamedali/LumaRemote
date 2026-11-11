@@ -53,14 +53,14 @@ struct ToastView: View {
                 .foregroundStyle(toast.style == .error ? Theme.warning : Theme.accent)
             Text(toast.message)
                 .font(.subheadline)
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
         }
         .padding(14)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(Theme.stroke))
-        .shadow(color: .black.opacity(0.4), radius: 16, y: 8)
+        .shadow(color: Theme.shadow, radius: 16, y: 8)
         .padding(.horizontal, 16)
         .accessibilityElement(children: .combine)
     }

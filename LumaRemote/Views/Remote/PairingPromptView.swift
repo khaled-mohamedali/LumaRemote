@@ -72,7 +72,7 @@ private struct PinEntryView: View {
                     .frame(maxWidth: 280, minHeight: 50)
                     .background(RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .fill(canSubmit || request.verifying ? Theme.accentDeep : Theme.cardRaised))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(canSubmit || request.verifying ? Color.white : Theme.textSecondary)
                 }
                 .buttonStyle(KeyPressStyle())
                 .disabled(!canSubmit)

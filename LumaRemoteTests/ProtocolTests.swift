@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import UIKit
 @testable import LumaRemote
 
 @Suite("SSAP protocol")
@@ -63,6 +64,14 @@ struct ProtocolTests {
         #expect(KeyboardViewModel.isLGSystemApp("com.palm.app.settings"))
         #expect(!KeyboardViewModel.isLGSystemApp("netflix"))
         #expect(!KeyboardViewModel.isLGSystemApp("amazon"))
+    }
+
+    @Test func appearanceModesMapToInterfaceStyles() {
+        #expect(AppearanceMode.system.interfaceStyle == .unspecified)
+        #expect(AppearanceMode.light.interfaceStyle == .light)
+        #expect(AppearanceMode.dark.interfaceStyle == .dark)
+        let defaults = UserDefaults(suiteName: "appearance-test-\(UUID().uuidString)")!
+        #expect(Preferences(defaults: defaults).appearance == .system)   // follows the phone by default
     }
 
     @Test func decodesRegisteredReply() throws {

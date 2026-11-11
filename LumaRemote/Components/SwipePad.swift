@@ -38,7 +38,7 @@ struct SwipePad: View {
                 .animation(.easeOut(duration: 0.15), value: flashed)
                 .allowsHitTesting(false)
             }
-            .shadow(color: .black.opacity(0.45), radius: 16, y: 8)
+            .shadow(color: Theme.shadow, radius: 16, y: 8)
             .contentShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
             .gesture(
                 DragGesture(minimumDistance: 0)

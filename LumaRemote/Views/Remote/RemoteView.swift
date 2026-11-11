@@ -52,7 +52,7 @@ struct RemoteView: View {
                     .font(.system(size: 20, weight: .medium))
                     .frame(width: 44, height: 44)
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(Theme.textPrimary)
             .accessibilityLabel("Settings")
             Spacer()
             HStack(spacing: 8) {
@@ -78,7 +78,7 @@ struct RemoteView: View {
             CircleKey(symbol: "house.fill", accessibilityLabel: "Home") { vm.press(.home) }
             Spacer()
             CircleKey(symbol: vm.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill",
-                      tint: vm.isMuted ? Theme.accent : .white, highlighted: vm.isMuted,
+                      tint: vm.isMuted ? Theme.accent : Theme.textPrimary, highlighted: vm.isMuted,
                       accessibilityLabel: vm.isMuted ? "Unmute" : "Mute") { vm.press(.mute) }
         }
         .padding(.horizontal, 12)
@@ -171,7 +171,7 @@ struct PlaybackBar: View {
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(KeyPressStyle())
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.textPrimary)
                     .accessibilityLabel(key.title)
                 }
             }
@@ -233,7 +233,7 @@ struct ShortcutRow: View {
 
     private func slotLabel<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
         HStack(spacing: 10) { content() }
-            .foregroundStyle(.white)
+            .foregroundStyle(Theme.textPrimary)
             .frame(maxWidth: .infinity, minHeight: 50)
             .padding(.horizontal, 10)
             .card(radius: 16)

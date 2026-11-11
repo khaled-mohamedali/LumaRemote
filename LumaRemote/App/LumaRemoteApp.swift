@@ -9,7 +9,6 @@ struct LumaRemoteApp: App {
         WindowGroup {
             RootView()
                 .environment(model)
-                .preferredColorScheme(.dark)
                 .tint(Theme.accent)
         }
         .onChange(of: scenePhase, initial: true) { _, phase in

@@ -34,7 +34,7 @@ struct HelpView: View {
                 DisclosureGroup {
                     Text(topic.1).font(.subheadline).foregroundStyle(Theme.textSecondary).padding(.vertical, 4)
                 } label: {
-                    Text(topic.0).foregroundStyle(.white)
+                    Text(topic.0).foregroundStyle(Theme.textPrimary)
                 }
                 .listRowBackground(Theme.card)
             }
@@ -77,7 +77,7 @@ struct RemoteMappingView: View {
                     HStack(alignment: .top, spacing: 12) {
                         badge(row.1)
                         VStack(alignment: .leading, spacing: 3) {
-                            Text(row.0).foregroundStyle(.white)
+                            Text(row.0).foregroundStyle(Theme.textPrimary)
                             Text(row.2).font(.footnote).foregroundStyle(Theme.textSecondary)
                         }
                     }

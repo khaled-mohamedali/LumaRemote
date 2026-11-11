@@ -31,6 +31,10 @@ struct RootView: View {
                 .interactiveDismissDisabled()
         }
         .onChange(of: app.network.restoredCount) { _, _ in app.service.networkRestored() }
+        .onAppear { WindowAppearance.apply(app.preferences.appearance) }
+        .onChange(of: app.preferences.appearance) { _, mode in
+            withAnimation(.easeInOut(duration: 0.25)) { WindowAppearance.apply(mode) }
+        }
     }
 
     private var tabs: some View {

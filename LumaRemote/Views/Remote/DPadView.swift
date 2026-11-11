@@ -11,7 +11,7 @@ struct DPadView: View {
             Circle()
                 .fill(Theme.padGradient)
                 .overlay(Circle().strokeBorder(Theme.stroke))
-                .shadow(color: .black.opacity(0.55), radius: 22, y: 12)
+                .shadow(color: Theme.shadow, radius: 22, y: 12)
 
             arrow(.up).offset(y: -(diameter / 2 - 42))
             arrow(.down).offset(y: diameter / 2 - 42)
@@ -21,7 +21,7 @@ struct DPadView: View {
             Button { onKey(.ok) } label: {
                 Text("OK")
                     .font(.system(size: 24, weight: .semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.textPrimary)
                     .frame(width: okSize, height: okSize)
                     .background(Circle().fill(Theme.keyGradient))
                     .overlay(Circle().strokeBorder(Theme.accent.opacity(0.35), lineWidth: 1.5))
@@ -38,7 +38,7 @@ struct DPadView: View {
         RepeatingKey(accessibilityLabel: key.title, action: { onKey(key) }) {
             Image(systemName: key.symbol)
                 .font(.system(size: 26, weight: .semibold))
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.textPrimary)
                 .frame(width: 76, height: 76)
         }
     }

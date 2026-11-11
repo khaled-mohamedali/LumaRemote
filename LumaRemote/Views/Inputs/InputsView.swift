@@ -66,11 +66,11 @@ struct InputsList: View {
             HStack(spacing: 14) {
                 Image(systemName: symbol)
                     .font(.system(size: 20))
-                    .foregroundStyle(current ? Theme.accent : .white)
+                    .foregroundStyle(current ? Theme.accent : Theme.textPrimary)
                     .frame(width: 40, height: 40)
                     .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.cardRaised))
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title).font(.body.weight(.medium)).foregroundStyle(.white)
+                    Text(title).font(.body.weight(.medium)).foregroundStyle(Theme.textPrimary)
                     Text(subtitle).font(.footnote).foregroundStyle(Theme.textSecondary)
                 }
                 Spacer()

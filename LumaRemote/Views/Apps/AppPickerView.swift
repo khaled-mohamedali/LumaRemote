@@ -27,7 +27,7 @@ struct AppPickerView: View {
                                     TVImage(urls: point.iconURLs, fallbackSymbol: "app.fill")
                                         .frame(width: 36, height: 36)
                                         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                                    Text(point.title).foregroundStyle(.white)
+                                    Text(point.title).foregroundStyle(Theme.textPrimary)
                                     Spacer()
                                     if point.id == currentID {
                                         Image(systemName: "checkmark").foregroundStyle(Theme.accent)
