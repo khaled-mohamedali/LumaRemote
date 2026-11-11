@@ -702,8 +702,49 @@ final class WebOSService {
         }
     }
 
-    func launch(appID: String, title: String) async -> CommandOutcome {
-        await request(.launch, payload: ["id": .string(appID)], label: title)
+    func launch(appID: String, title: String, params: JSONValue? = nil) async -> CommandOutcome {
+        var payload: [String: JSONValue] = ["id": .string(appID)]
+        if let params { payload["params"] = params }
+        return await request(.launch, payload: .object(payload), label: title)
+    }
+
+    // MARK: - YouTube search
+
+    /// YouTube (and Netflix, Prime…) draw their own on-screen keyboard, so text sent
+    /// through the webOS IME never reaches their search box. YouTube can instead be
+    /// (re)launched straight into search results.
+    static let youTubeAppID = "youtube.leanback.v4"
+
+    enum YouTubeSearchStyle { case voiceIntent, url }
+
+    /// - `.voiceIntent`: the launch parameters LG's own voice search (ThinQ) sends to
+    ///   YouTube: `contentTarget: {intent: "SearchContent", intentParam: query}`.
+    /// - `.url`: the equivalent YouTube TV URL, as a fallback for app versions that
+    ///   ignore the intent form.
+    func searchYouTube(_ query: String, style: YouTubeSearchStyle = .voiceIntent) async -> CommandOutcome {
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !q.isEmpty else { return .failed(.commandFailed("nothing to search for")) }
+        let target: JSONValue
+        switch style {
+        case .voiceIntent:
+            target = ["intent": "SearchContent", "intentParam": .string(q)]
+        case .url:
+            target = .string(Self.youTubeSearchURL(for: q))
+        }
+        return await launch(appID: Self.youTubeAppID, title: "YouTube", params: ["contentTarget": target])
+    }
+
+    nonisolated static func youTubeSearchURL(for query: String) -> String {
+        var c = URLComponents(string: "https://www.youtube.com/tv")!
+        c.queryItems = [
+            URLQueryItem(name: "inApp", value: "true"),
+            URLQueryItem(name: "vs", value: "9"),
+            URLQueryItem(name: "va", value: "search"),
+            URLQueryItem(name: "launch", value: "voice"),
+            URLQueryItem(name: "launch", value: "search"),
+            URLQueryItem(name: "vq", value: query),
+        ]
+        return (c.url?.absoluteString ?? "https://www.youtube.com/tv") + "#/"
     }
 
     func switchInput(_ input: ExternalInput) async -> CommandOutcome {

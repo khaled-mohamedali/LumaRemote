@@ -20,6 +20,8 @@ struct HelpView: View {
          "The TV forgets paired apps after a factory reset or some firmware updates. Accept the prompt again; the new key replaces the old one."),
         ("Certificate changed",
          "Firmware updates can change the TV’s security certificate. If you just updated the TV, open the TV’s details in Devices and tap Reset certificate trust."),
+        ("Typing doesn’t show up in YouTube, Netflix, Prime Video…",
+         "Most third-party apps draw their own on-screen keyboard instead of LG’s, so text typed from a phone can’t reach them. With YouTube open, the Keyboard screen becomes “Search YouTube” and opens the results directly. For Netflix and similar apps it shows arrow keys to pick letters on the app’s own keyboard."),
         ("A button does nothing",
          "Some keys are delivered as button events that the TV doesn’t acknowledge. Keys marked with an amber dot are experimental and may be ignored by your firmware. Features the TV reports as unsupported are hidden automatically."),
         ("Turning the TV on",

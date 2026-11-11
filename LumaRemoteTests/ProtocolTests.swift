@@ -49,6 +49,22 @@ struct ProtocolTests {
         #expect(devices[0].effectivePairingMethod == .pin)
     }
 
+    @Test func youTubeSearchURLEncodesQuery() throws {
+        let url = WebOSService.youTubeSearchURL(for: "lo-fi beats & rain")
+        #expect(url.hasPrefix("https://www.youtube.com/tv?"))
+        #expect(url.hasSuffix("#/"))
+        let items = URLComponents(string: String(url.dropLast(2)))?.queryItems ?? []
+        #expect(items.first { $0.name == "vq" }?.value == "lo-fi beats & rain")
+        #expect(items.filter { $0.name == "launch" }.map(\.value) == ["voice", "search"])
+    }
+
+    @Test func lgSystemAppsAreRecognised() {
+        #expect(KeyboardViewModel.isLGSystemApp("com.webos.app.browser"))
+        #expect(KeyboardViewModel.isLGSystemApp("com.palm.app.settings"))
+        #expect(!KeyboardViewModel.isLGSystemApp("netflix"))
+        #expect(!KeyboardViewModel.isLGSystemApp("amazon"))
+    }
+
     @Test func decodesRegisteredReply() throws {
         let m = try SSAPMessage.decode(#"{"type":"registered","id":"register_0","payload":{"client-key":"k"}}"#)
         #expect(m.type == "registered")

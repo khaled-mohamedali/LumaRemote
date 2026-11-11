@@ -131,6 +131,11 @@ Add a TV with your Mac's IP and Connection = **Plain (ws)**. Scenario flags:
   Networking entitlement (an application to Apple). Without it the app also sends the packet
   straight to the TV's IP, which works while your router still remembers the TV. It may fail
   after the TV has been off for a long time.
+- **Typing into YouTube, Netflix, Prime Video:** these apps use their own on-screen
+  keyboard, which the webOS text-input API can't reach. YouTube searches are sent by
+  relaunching YouTube with LG's voice-search parameters (`contentTarget: {intent:
+  "SearchContent", intentParam: …}`), with a URL form as a fallback. Netflix has no search
+  launch parameter, so the app offers navigation keys for its keyboard instead.
 - **Button events are unacknowledged** by webOS. The app can confirm a button was sent,
   not that the TV acted on it.
 - **Automatic discovery** may still miss your TV if it advertises no Bonjour services and
