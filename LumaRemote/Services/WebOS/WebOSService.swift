@@ -734,6 +734,16 @@ final class WebOSService {
         return await launch(appID: Self.youTubeAppID, title: "YouTube", params: ["contentTarget": target])
     }
 
+    /// Experimental: sends any app the same "SearchContent" launch intent LG's voice
+    /// search uses. Whether an app honours it is up to the app; if it doesn't, the app
+    /// usually just reopens. The TV only confirms the launch, not the search.
+    func searchViaVoiceIntent(appID: String, title: String, query: String) async -> CommandOutcome {
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !q.isEmpty else { return .failed(.commandFailed("nothing to search for")) }
+        let intent: JSONValue = ["intent": "SearchContent", "intentParam": .string(q)]
+        return await launch(appID: appID, title: title, params: ["contentTarget": intent])
+    }
+
     nonisolated static func youTubeSearchURL(for query: String) -> String {
         var c = URLComponents(string: "https://www.youtube.com/tv")!
         c.queryItems = [

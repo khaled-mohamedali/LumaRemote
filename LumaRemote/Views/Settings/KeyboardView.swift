@@ -8,6 +8,9 @@ import SwiftUI
 struct KeyboardView: View {
     @Environment(AppModel.self) private var app
     @FocusState private var focused: Bool
+    @AppStorage("keyboard.navStyle") private var navStyle: NavStyle = .swipe
+
+    enum NavStyle: String { case swipe, buttons }
 
     var body: some View {
         @Bindable var vm = app.keyboard
@@ -19,7 +22,7 @@ struct KeyboardView: View {
                 case .youTube:
                     youTubeMode(vm)
                 case .ownKeyboard(let name):
-                    ownKeyboardMode(name)
+                    ownKeyboardMode(name, vm)
                 }
             }
             .padding(20)
@@ -71,18 +74,60 @@ struct KeyboardView: View {
             .disabled(vm.text.trimmingCharacters(in: .whitespaces).isEmpty)
     }
 
-    @ViewBuilder private func ownKeyboardMode(_ name: String) -> some View {
+    @ViewBuilder private func ownKeyboardMode(_ name: String, _ model: KeyboardViewModel) -> some View {
+        @Bindable var vm = model
         banner(symbol: "keyboard.badge.ellipsis",
                title: "\(name) uses its own keyboard",
-               text: "Most third-party apps (Netflix, Prime Video and others) draw their own keyboard, which can’t receive text typed from a phone. That’s a limit of the app, not your TV. Pick letters on its on-screen keyboard with the keys below.")
-        DPadView { app.remote.press($0) }
-            .scaleEffect(0.8)
-            .frame(width: 216, height: 216)
+               text: "Typed text can’t reach it. Use the swipe pad to pick letters on its on-screen keyboard, or try a direct search below.")
+
+        Picker("Navigation", selection: $navStyle) {
+            Text("Swipe pad").tag(NavStyle.swipe)
+            Text("Buttons").tag(NavStyle.buttons)
+        }
+        .pickerStyle(.segmented)
+
+        if navStyle == .swipe {
+            SwipePad { app.remote.press($0) }
+                .frame(height: 260)
+        } else {
+            DPadView { app.remote.press($0) }
+                .scaleEffect(0.8)
+                .frame(width: 216, height: 216)
+        }
         HStack(spacing: 24) {
             CircleKey(symbol: "arrow.uturn.backward", size: 56, accessibilityLabel: "Back") { app.remote.press(.back) }
+            CircleKey(accessibilityLabel: "OK", action: { app.remote.press(.ok) }) {
+                Text("OK").font(.system(size: 17, weight: .semibold))
+            }
             CircleKey(symbol: "house.fill", size: 56, accessibilityLabel: "Home") { app.remote.press(.home) }
         }
-        note("Tip: on YouTube you can type a search directly here.")
+
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Text("Try a direct search").font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                Text("EXPERIMENTAL")
+                    .font(.caption2.weight(.bold))
+                    .padding(.horizontal, 6).padding(.vertical, 2)
+                    .background(Capsule().fill(Theme.warning.opacity(0.2)))
+                    .foregroundStyle(Theme.warning)
+            }
+            Text("Sends \(name) the same search request LG’s voice assistant uses. If \(name) just reopens instead of showing results, it doesn’t support this.")
+                .font(.footnote).foregroundStyle(Theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            input($vm.text, prompt: "Search \(name)") { vm.trySearchLaunch(appName: name) }
+            Button { vm.trySearchLaunch(appName: name) } label: {
+                Label("Try search in \(name)", systemImage: "magnifyingglass")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .foregroundStyle(.white)
+                    .card(radius: 14)
+            }
+            .buttonStyle(KeyPressStyle())
+            .disabled(vm.text.trimmingCharacters(in: .whitespaces).isEmpty)
+        }
+        .padding(14)
+        .card(radius: 16)
+
         Button("This app shows the LG keyboard? Type anyway") { app.keyboard.typeAnyway() }
             .font(.footnote)
     }

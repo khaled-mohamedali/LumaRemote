@@ -71,6 +71,19 @@ final class KeyboardViewModel {
             || appID.hasPrefix("com.lge.") || appID.hasPrefix("com.lg.")
     }
 
+    /// Experimental: ask the app on screen to open search results for the typed text,
+    /// using LG's voice-search launch intent (works for YouTube; untested elsewhere).
+    func trySearchLaunch(appName: String) {
+        let query = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty, let appID = service.foregroundAppID, !appID.isEmpty else { return }
+        Haptics.tap(enabled: preferences.hapticsEnabled)
+        Task {
+            let outcome = await service.searchViaVoiceIntent(appID: appID, title: appName, query: query)
+            remote.handle(outcome, for: appName,
+                          successMessage: "Asked \(appName) to search for “\(query)”. If it just reopened, this app doesn’t support it — use the swipe pad.")
+        }
+    }
+
     /// For third-party apps that do use the TV's keyboard: send typed text anyway.
     func typeAnyway() {
         typingForcedForApp = service.foregroundAppID ?? ""
