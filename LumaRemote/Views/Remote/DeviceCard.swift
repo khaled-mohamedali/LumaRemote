@@ -111,6 +111,7 @@ struct ConnectionBanner: View {
         case .idle: return app.service.device == nil ? "No TV selected" : "Not connected"
         case .connecting(let step): return step
         case .awaitingPairing: return "Waiting for you to accept on the TV"
+        case .awaitingPin: return "Enter the code shown on your TV"
         case .connected: return "Connected"
         case .reconnecting(let attempt): return "Reconnecting… (attempt \(attempt))"
         case .tvOff: return "Your TV is off or asleep"

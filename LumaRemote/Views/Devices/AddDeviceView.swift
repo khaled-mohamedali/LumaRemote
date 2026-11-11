@@ -30,6 +30,18 @@ struct AddDeviceView: View {
             .listRowBackground(Theme.card)
 
             Section {
+                Picker("Pairing", selection: $vm.manualPairingMethod) {
+                    ForEach(PairingMethod.allCases) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.segmented)
+            } header: {
+                Text("How to pair")
+            } footer: {
+                Text(vm.manualPairingMethod.detail)
+            }
+            .listRowBackground(Theme.card)
+
+            Section {
                 Picker("Connection", selection: $vm.manualTransport) {
                     ForEach(TransportPreference.allCases) { Text($0.title).tag($0) }
                 }
@@ -99,6 +111,9 @@ struct AddDeviceView: View {
                     if let model = result.modelName { Text("Model: \(model)") }
                     if let version = result.webOSVersion { Text("webOS: \(version)") }
                     Text("Connection: \(result.endpoint.label)")
+                    if let types = result.pairingTypes {
+                        Text(types.contains("PIN") ? "Code pairing: supported" : "Code pairing: not offered — use Accept on TV")
+                    }
                 }
                 .font(.footnote)
                 .foregroundStyle(Theme.textSecondary)

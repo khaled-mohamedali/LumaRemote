@@ -16,6 +16,7 @@ final class DevicesViewModel {
     var manualName = ""
     var manualPort = ""
     var manualTransport: TransportPreference = .automatic
+    var manualPairingMethod: PairingMethod = .pin
     private(set) var testState: TestState = .idle
 
     let discovery = DiscoveryService()
@@ -64,6 +65,7 @@ final class DevicesViewModel {
         }
         device.customPort = portValue
         device.transport = manualTransport
+        device.pairingMethod = manualPairingMethod
         return device
     }
 
@@ -101,6 +103,7 @@ final class DevicesViewModel {
         manualName = ""
         manualPort = ""
         manualTransport = .automatic
+        manualPairingMethod = .pin
         testState = .idle
     }
 

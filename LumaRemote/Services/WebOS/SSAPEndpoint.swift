@@ -53,6 +53,9 @@ nonisolated enum SSAPEndpoint: String, Sendable, CaseIterable {
     // Button / pointer input (returns a URL for a second WebSocket)
     case pointerInputSocket = "com.webos.service.networkinput/getPointerInputSocket"
 
+    // Pairing (PIN shown on the TV)
+    case setPin = "pairing/setPin"
+
     // Notifications
     case toast = "system.notifications/createToast"
 

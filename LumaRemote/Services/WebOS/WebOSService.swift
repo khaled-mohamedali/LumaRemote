@@ -7,10 +7,18 @@ import UIKit
 /// it goes through `RemoteViewModel`, which calls this service.
 @Observable
 final class WebOSService {
+    /// State of the "type the code shown on your TV" step.
+    struct PinRequest: Equatable {
+        var message: String?
+        var verifying: Bool
+        var previousKeyRejected: Bool
+    }
+
     enum Phase: Equatable {
         case idle
         case connecting(String)
         case awaitingPairing(previousKeyRejected: Bool)
+        case awaitingPin(PinRequest)
         case connected
         case reconnecting(attempt: Int)
         case tvOff
@@ -19,7 +27,7 @@ final class WebOSService {
         var isConnected: Bool { self == .connected }
         var isBusy: Bool {
             switch self {
-            case .connecting, .awaitingPairing, .reconnecting: return true
+            case .connecting, .awaitingPairing, .awaitingPin, .reconnecting: return true
             default: return false
             }
         }
@@ -40,6 +48,9 @@ final class WebOSService {
     private(set) var keyboardFocused: Bool?
     private(set) var appsLoaded = false
     private(set) var inputsLoaded = false
+    /// True when code pairing was requested but this TV doesn't offer it, so the
+    /// Accept prompt is used instead.
+    private(set) var pinPairingUnavailable = false
     let capabilities = CapabilityStore()
 
     // MARK: Dependencies & internals
@@ -60,6 +71,7 @@ final class WebOSService {
     @ObservationIgnored private var iconCache: [URL: UIImage] = [:]
     @ObservationIgnored private var iconTasks: [URL: Task<UIImage?, Never>] = [:]
     @ObservationIgnored private var iconFailures: Set<URL> = []
+    @ObservationIgnored private var pinContinuation: CheckedContinuation<String?, Never>?
 
     init(store: DeviceStore, keychain: KeychainStore, network: NetworkMonitor) {
         self.store = store
@@ -109,6 +121,7 @@ final class WebOSService {
     }
 
     private func teardown() {
+        pinContinuation?.resume(returning: nil); pinContinuation = nil
         connectTask?.cancel(); connectTask = nil
         reconnectTask?.cancel(); reconnectTask = nil
         keepAliveTask?.cancel(); keepAliveTask = nil
@@ -246,47 +259,84 @@ final class WebOSService {
 
     // MARK: - Pairing
 
+    /// Pairs using the TV's preferred method for this device. Order of attempts:
+    /// 1. the chosen method (code by default) with the current manifest,
+    /// 2. the same method with the legacy signed manifest,
+    /// 3. for code pairing only: the Accept prompt, if the TV refused code pairing.
+    /// A wrong code restarts registration so the TV shows a fresh code (max 3 tries).
     private func registerWithFallback(device: SavedDevice, endpoint: TVEndpoint, generation gen: Int) async throws -> SSAPRegistration.Manifest {
-        var order: [SSAPRegistration.Manifest] = [.current, .legacySigned]
+        var manifests: [SSAPRegistration.Manifest] = [.current, .legacySigned]
         if let saved = device.registrationManifest.flatMap(SSAPRegistration.Manifest.init(rawValue:)) {
-            order.removeAll { $0 == saved }
-            order.insert(saved, at: 0)
+            manifests.removeAll { $0 == saved }
+            manifests.insert(saved, at: 0)
         }
+        var method = device.effectivePairingMethod
+        pinPairingUnavailable = false
+        if method == .pin, info.supportsPinPairing == false {
+            method = .prompt
+            pinPairingUnavailable = true
+        }
+        var attempts: [(manifest: SSAPRegistration.Manifest, method: PairingMethod)] = manifests.map { ($0, method) }
+        if method == .pin { attempts.append((manifests[0], .prompt)) }
+
         var lastError: WebOSError = .pairingFailed("unknown")
-        for (index, manifest) in order.enumerated() {
-            if index > 0 {
-                // The TV may close the socket after rejecting a manifest; start clean.
+        var index = 0
+        var needsFreshSocket = false
+        var wrongCodes = 0
+        var pinMessage: String?
+        while index < attempts.count {
+            let attempt = attempts[index]
+            if needsFreshSocket {
+                // The TV may close the socket after a failed registration; start clean.
                 closeSocketOnly()
                 try await openSocket(device: device, endpoint: endpoint)
             }
+            needsFreshSocket = true
+            if attempt.method == .prompt && method == .pin { pinPairingUnavailable = true }
             do {
-                try await register(device: device, manifest: manifest)
-                return manifest
+                try await register(device: device, manifest: attempt.manifest, method: attempt.method, pinMessage: pinMessage)
+                return attempt.manifest
+            } catch WebOSError.pinIncorrect {
+                guard gen == generation else { throw CancellationError() }
+                wrongCodes += 1
+                guard wrongCodes < 3 else { throw WebOSError.pinIncorrect }
+                pinMessage = "That code didn’t match. Your TV is now showing a new one."
+                // Same attempt again on a fresh socket → the TV shows a new code.
             } catch WebOSError.pairingFailed(let reason) {
                 guard gen == generation else { throw CancellationError() }
                 lastError = .pairingFailed(reason)
-                continue
+                index += 1
             }
         }
         throw lastError
     }
 
-    private func register(device: SavedDevice, manifest: SSAPRegistration.Manifest) async throws {
+    private func register(device: SavedDevice, manifest: SSAPRegistration.Manifest,
+                          method: PairingMethod, pinMessage: String?) async throws {
         guard let socket else { throw WebOSError.notConnected }
         let storedKey = keychain.clientKey(for: device.id)
-        try await socket.send(SSAPRegistration.message(clientKey: storedKey, manifest: manifest))
+        try await socket.send(SSAPRegistration.message(clientKey: storedKey, manifest: manifest, pairingType: method.wireValue))
 
+        // With a valid stored key the TV answers `registered` straight away, whatever
+        // the pairing type. Otherwise it first says which kind of pairing it started.
         var reply = try await socket.awaitMessage(id: "register_0", timeout: .seconds(10), what: "pairing")
-        if reply.type == "response", reply.payload?["pairingType"]?.string == "PROMPT" {
-            // The TV is showing its "allow this device?" prompt. If we sent a key, the
-            // TV didn't recognise it (e.g. after a factory reset) and asks again.
-            phase = .awaitingPairing(previousKeyRejected: storedKey != nil)
-            do {
-                reply = try await socket.awaitMessage(id: "register_0", timeout: .seconds(60), what: "pairing")
-            } catch WebOSError.requestTimedOut {
-                throw WebOSError.pairingTimedOut
-            } catch WebOSError.connectionLost {
-                throw WebOSError.pairingRejected
+        var sentPin = false
+        if reply.type == "response" {
+            let started = reply.payload?["pairingType"]?.string?.uppercased() ?? ""
+            if started == "PROMPT" {
+                // The TV is showing "Allow this device?". If we sent a key, the TV didn't
+                // recognise it (e.g. after a factory reset) and asks again.
+                phase = .awaitingPairing(previousKeyRejected: storedKey != nil)
+                do {
+                    reply = try await socket.awaitMessage(id: "register_0", timeout: .seconds(60), what: "pairing")
+                } catch WebOSError.requestTimedOut {
+                    throw WebOSError.pairingTimedOut
+                } catch WebOSError.connectionLost {
+                    throw WebOSError.pairingRejected
+                }
+            } else if started.contains("PIN") || started == "COMBINED" {
+                reply = try await exchangePin(socket: socket, previousKeyRejected: storedKey != nil, message: pinMessage)
+                sentPin = true
             }
         }
 
@@ -301,11 +351,64 @@ final class WebOSService {
             if text.contains("denied") || text.contains("reject") || text.contains("cancel") || text.contains("403") {
                 throw WebOSError.pairingRejected
             }
+            if sentPin { throw WebOSError.pinIncorrect }
             throw WebOSError.pairingFailed(reply.errorDescription)
         default:
             throw WebOSError.pairingFailed("unexpected reply “\(reply.type)”")
         }
         socket.onUnexpectedClose = { [weak self] _ in self?.handleUnexpectedClose() }
+    }
+
+    /// Code pairing: wait for the user to type the code shown on the TV, send it with
+    /// `pairing/setPin`, then wait for the TV's `registered` reply to the original
+    /// register request.
+    private func exchangePin(socket: SSAPSocket, previousKeyRejected: Bool, message: String?) async throws -> SSAPMessage {
+        phase = .awaitingPin(PinRequest(message: message, verifying: false, previousKeyRejected: previousKeyRejected))
+        guard let pin = await waitForPin() else { throw CancellationError() }
+
+        do {
+            let ack = try await socket.request(SSAPEndpoint.setPin.uri, payload: ["pin": .string(pin)], timeout: .seconds(8))
+            if ack.isError {
+                if ack.isUnsupported { throw WebOSError.pairingFailed("this TV doesn’t accept pairing codes") }
+                throw WebOSError.pinIncorrect
+            }
+        } catch WebOSError.requestTimedOut {
+            // Some firmware doesn't acknowledge setPin; the register reply below decides.
+        }
+        do {
+            return try await socket.awaitMessage(id: "register_0", timeout: .seconds(10), what: "pairing")
+        } catch WebOSError.requestTimedOut {
+            throw WebOSError.pinIncorrect
+        }
+    }
+
+    private func waitForPin() async -> String? {
+        pinContinuation?.resume(returning: nil)
+        return await withCheckedContinuation { continuation in
+            pinContinuation = continuation
+        }
+    }
+
+    /// Called by the UI with the code the user read off the TV.
+    func submitPin(_ pin: String) {
+        let digits = pin.filter(\.isNumber)
+        guard !digits.isEmpty, case .awaitingPin(var request) = phase, !request.verifying,
+              let continuation = pinContinuation else { return }
+        pinContinuation = nil
+        request.verifying = true
+        request.message = nil
+        phase = .awaitingPin(request)
+        continuation.resume(returning: digits)
+    }
+
+    /// Starts pairing over (new code / new prompt), optionally switching method.
+    func restartPairing(using method: PairingMethod? = nil) {
+        guard var device else { return }
+        if let method, device.pairingMethod != method {
+            device.pairingMethod = method
+            store.upsert(device)
+        }
+        connect(to: device)
     }
 
     // MARK: - Capability detection & subscriptions

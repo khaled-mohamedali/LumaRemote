@@ -12,8 +12,9 @@ your TV on your local network.
    Apple ID works for installing on your own iPhone.
 3. Run on your iPhone (iOS 17+). On first connect iOS asks for **Local Network** access.
    Allow it; without it no connection is possible.
-4. Tap **Enter IP address**, type your TV's IP, **Test connection**, then **Save & Pair**,
-   and choose **Accept** on the TV with its own remote.
+4. Tap **Enter IP address**, type your TV's IP, **Test connection**, then **Save & Pair**.
+   By default the TV shows a **pairing code** that you type on the iPhone, so no TV remote
+   is needed. Choose **Accept on TV** instead if you prefer pressing Accept with the remote.
 
 If the `.xcodeproj` gives you trouble, `project.yml` can regenerate it:
 `brew install xcodegen && xcodegen`.
@@ -61,6 +62,7 @@ Cross-checked against Home Assistant's maintained `aiowebostv` and `lgtv2`.
 | Endpoint | Older firmware: `ws://IP:3000`. Firmware from ~2022–23 on (including updates to 2019 models): only `wss://IP:3001`, with a certificate from LG's private CA (identical on every LG TV). | Tries `wss:3001` then `ws:3000` (TCP probe first for precise errors), remembers what worked. Port/scheme overridable per TV. |
 | TLS | System trust can't validate LG's cert. | Trust-on-first-use: pins the cert's SHA-256 per TV and refuses a different one ("Reset certificate trust" after a firmware update). Only the configured TV IP is trusted. |
 | Handshake | `hello` → (newer firmware) `system/getSystemInfo` before registering → `register` with `pairingType: PROMPT` and a permission manifest. First reply `{"pairingType":"PROMPT"}`, then `registered` with `client-key`, or `error` if declined. | Exactly this. Prompt waits up to 60 s. An unrecognised stored key causes a new prompt, which the UI explains. |
+| Pairing method | The TV's `hello` lists supported `pairingTypes` (e.g. `PIN`, `PROMPT`, `COMBINED`). With `pairingType: PIN` the TV shows a code; the client sends it via `ssap://pairing/setPin` `{"pin": "…"}` and the TV then answers the original register with `registered`. Confirmed in bscpylgtv. | Code pairing by default (per-TV setting). Skipped if `hello` doesn't list `PIN`; falls back to the Accept prompt if the TV refuses it. A wrong code restarts registration so the TV shows a fresh code (3 tries). |
 | Manifest | aiowebostv now sends an unsigned manifest; older clients use one signed with LG's test key. | Tries the current manifest; if the TV rejects the *manifest* (not the user), retries with the signed legacy one and remembers which worked. |
 | Commands | Request/response JSON over the main socket; errors like `404 no such service or method`, `401 insufficient permissions`. | Confirmed commands (volume, mute, channel, media, inputs, apps, text, power-off) await the reply. A 404 hides that control. |
 | Buttons | `getPointerInputSocket` returns a second socket; frames `type:button\nname:HOME\n\n`. **Never acknowledged.** | Navigation, Home, Back, digits, colour keys etc. The UI never claims these "succeeded"; it only reports failures to send. |
@@ -100,6 +102,8 @@ Add a TV with your Mac's IP and Connection = **Plain (ws)**. Scenario flags:
 | TV on and reachable | default |
 | Pairing rejected | `--pair reject` |
 | Pairing never answered | `--pair ignore` |
+| Code pairing (code printed in the terminal) | default; `--pin 12345678` for a fixed code |
+| TV without code pairing | `--no-pin` |
 | Invalid / forgotten registration key | `--forget-keys` |
 | Firmware lacks a command | `--unsupported media.controls/play,tv/channelUp` |
 | No tuner / no button socket | `--no-tuner` / `--no-pointer` |

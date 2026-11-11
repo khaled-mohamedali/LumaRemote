@@ -9,6 +9,10 @@ Mock LG webOS TV (SSAP) for testing Luma Remote in the iOS Simulator.
     python3 tools/mock_tv.py --unsupported media.controls/play,tv/channelUp
     python3 tools/mock_tv.py --no-tuner --no-pointer
     python3 tools/mock_tv.py --forget-keys         # simulates a factory reset: stored key rejected
+    python3 tools/mock_tv.py --no-pin              # TV that only offers the Accept prompt
+
+Code pairing: when the app asks for PIN pairing, the "TV" prints a code here; type it
+in the app. A wrong code ends that pairing attempt (the app then requests a new code).
 
 In Luma Remote: Add TV › Enter IP address › your Mac's IP, Connection: Plain (ws).
 Stop the script (Ctrl-C) and restart it to simulate the TV restarting.
@@ -84,6 +88,7 @@ async def push(uri):
 
 async def handle_main(ws, args, host, port):
     registered = False
+    pending_pin = None  # (register message id, code) while a code is "on screen"
     async for raw in ws:
         msg = json.loads(raw)
         mtype, mid = msg.get("type"), msg.get("id")
@@ -94,7 +99,7 @@ async def handle_main(ws, args, host, port):
             await ws.send(json.dumps({"type": "hello", "id": mid, "payload": {
                 "deviceType": "tv", "deviceOS": "webOS", "deviceOSVersion": "4.1.0",
                 "deviceOSReleaseVersion": "4.5.0", "deviceUUID": "mock-0001",
-                "pairingTypes": ["PIN", "PROMPT", "COMBINED"]}}))
+                "pairingTypes": ["PROMPT"] if args.no_pin else ["PIN", "PROMPT", "COMBINED"]}}))
             continue
 
         if mtype == "register":
@@ -103,6 +108,16 @@ async def handle_main(ws, args, host, port):
                 registered = True
                 print("✓ registered with stored key (no prompt)")
                 await ws.send(json.dumps({"type": "registered", "id": mid, "payload": {"client-key": key}}))
+                continue
+            if msg["payload"].get("pairingType") == "PIN":
+                if args.no_pin:
+                    print("✗ PIN pairing requested but not supported")
+                    await ws.send(json.dumps({"type": "error", "id": mid, "error": "400 unsupported pairing type", "payload": {}}))
+                    continue
+                code = args.pin or "".join(secrets.choice("0123456789") for _ in range(8))
+                pending_pin = (mid, code)
+                print(f"🔢 TV shows pairing code: {code}")
+                await reply({"pairingType": "PIN", "returnValue": True})
                 continue
             print("… showing pairing prompt on TV (mode: %s)" % args.pair)
             await reply({"pairingType": "PROMPT", "returnValue": True})
@@ -116,6 +131,25 @@ async def handle_main(ws, args, host, port):
             elif args.pair == "reject":
                 print("✗ user declined")
                 await ws.send(json.dumps({"type": "error", "id": mid, "error": "403 User denied access", "payload": {}}))
+            continue
+
+        if uri == "pairing/setPin":
+            entered = str((msg.get("payload") or {}).get("pin", ""))
+            if not pending_pin:
+                await ws.send(json.dumps({"type": "error", "id": mid, "error": "500 no pairing in progress", "payload": {}}))
+            elif entered == pending_pin[1]:
+                reg_id = pending_pin[0]
+                pending_pin = None
+                key = secrets.token_hex(16)
+                STATE["keys"].add(key)
+                registered = True
+                print("✓ correct code; issued new client-key")
+                await reply({"returnValue": True})
+                await ws.send(json.dumps({"type": "registered", "id": reg_id, "payload": {"client-key": key}}))
+            else:
+                print(f"✗ wrong code entered: {entered}")
+                pending_pin = None
+                await ws.send(json.dumps({"type": "error", "id": mid, "error": "500 Application error: invalid PIN", "payload": {}}))
             continue
 
         if not registered:
@@ -201,6 +235,8 @@ async def main():
     p.add_argument("--no-tuner", action="store_true")
     p.add_argument("--no-pointer", action="store_true")
     p.add_argument("--forget-keys", action="store_true")
+    p.add_argument("--no-pin", action="store_true", help="TV doesn't offer code pairing")
+    p.add_argument("--pin", default="", help="fixed pairing code instead of a random one")
     args = p.parse_args()
     args.unsupported = {u.strip().replace("ssap://", "") for u in args.unsupported.split(",") if u.strip()}
     host = local_ip()

@@ -26,7 +26,7 @@ struct RootView: View {
         .animation(.spring(response: 0.35, dampingFraction: 0.85), value: app.remote.toast)
         .sheet(isPresented: pairingBinding) {
             PairingPromptView()
-                .presentationDetents([.medium])
+                .presentationDetents([.large])
                 .presentationBackground(Theme.card)
                 .interactiveDismissDisabled()
         }
@@ -54,7 +54,12 @@ struct RootView: View {
 
     private var pairingBinding: Binding<Bool> {
         Binding(
-            get: { if case .awaitingPairing = app.service.phase { return true } else { return false } },
+            get: {
+                switch app.service.phase {
+                case .awaitingPairing, .awaitingPin: return true
+                default: return false
+                }
+            },
             set: { _ in }
         )
     }

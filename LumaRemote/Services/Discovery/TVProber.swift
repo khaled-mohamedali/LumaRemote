@@ -11,6 +11,7 @@ enum TVProber {
         var webOSVersion: String?
         var modelName: String?
         var deviceUUID: String?
+        var pairingTypes: [String]?
     }
 
     static func identify(host: String, endpoints: [TVEndpoint], probeTimeout: Duration = .seconds(3)) async -> Swift.Result<Result, WebOSError> {
@@ -45,6 +46,7 @@ enum TVProber {
                 result.webOSVersion = hello.payload?["deviceOSReleaseVersion"]?.string
                     ?? hello.payload?["deviceOSVersion"]?.string
                 result.deviceUUID = hello.payload?["deviceUUID"]?.string
+                result.pairingTypes = hello.payload?["pairingTypes"]?.array?.compactMap { $0.string?.uppercased() }
                 if let info = try? await socket.request(SSAPEndpoint.systemInfo.uri, timeout: .seconds(2)), !info.isError {
                     result.modelName = info.payload?["modelName"]?.string
                 }

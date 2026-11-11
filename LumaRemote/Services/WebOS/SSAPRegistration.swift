@@ -1,7 +1,9 @@
 import Foundation
 
-/// Builds the `register` message. The TV shows an "Allow connection?" prompt the first
-/// time (pairingType PROMPT) and replies with a `client-key` once the user accepts.
+/// Builds the `register` message. Two pairing types are used:
+/// - `PROMPT`: the TV shows "Allow connection?" and someone accepts with the TV remote.
+/// - `PIN`: the TV shows a code on screen; the app sends it with `ssap://pairing/setPin`.
+/// Either way the TV replies `registered` with a `client-key` that skips pairing next time.
 ///
 /// Two manifests are supported:
 /// - `.current`: the unsigned manifest used by Home Assistant's aiowebostv (works on
@@ -16,10 +18,10 @@ nonisolated enum SSAPRegistration {
         case legacySigned
     }
 
-    static func message(clientKey: String?, manifest: Manifest) -> SSAPRequest {
+    static func message(clientKey: String?, manifest: Manifest, pairingType: String = "PROMPT") -> SSAPRequest {
         var payload: [String: JSONValue] = [
             "forcePairing": false,
-            "pairingType": "PROMPT",
+            "pairingType": .string(pairingType),
             "manifest": manifest == .current ? currentManifest : legacyManifest,
         ]
         if let clientKey, !clientKey.isEmpty {

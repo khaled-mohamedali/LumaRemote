@@ -7,7 +7,7 @@ struct StatusDot: View {
     var color: Color {
         switch phase {
         case .connected: return Theme.success
-        case .connecting, .awaitingPairing, .reconnecting: return Theme.warning
+        case .connecting, .awaitingPairing, .awaitingPin, .reconnecting: return Theme.warning
         case .tvOff, .idle: return Theme.textSecondary
         case .failed: return Theme.power
         }

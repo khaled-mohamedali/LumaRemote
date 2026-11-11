@@ -55,6 +55,12 @@ struct DeviceDetailView: View {
                 .listRowBackground(Theme.card)
 
                 Section {
+                    Picker("Pairing method", selection: Binding(
+                        get: { binding.wrappedValue.effectivePairingMethod },
+                        set: { binding.wrappedValue.pairingMethod = $0 }
+                    )) {
+                        ForEach(PairingMethod.allCases) { Text($0.title).tag($0) }
+                    }
                     LabeledContent("Pairing key", value: app.devices.isPaired(binding.wrappedValue) ? "Stored in Keychain" : "Not paired")
                     if let fp = binding.wrappedValue.certificateFingerprint {
                         VStack(alignment: .leading, spacing: 4) {
@@ -69,7 +75,9 @@ struct DeviceDetailView: View {
                     Button("Forget pairing", role: .destructive) { confirmForget = true }
                         .disabled(!app.devices.isPaired(binding.wrappedValue))
                 } header: {
-                    Text("Security")
+                    Text("Pairing & security")
+                } footer: {
+                    Text("The pairing method is used the next time this iPhone pairs with the TV, for example after Forget pairing. \(binding.wrappedValue.effectivePairingMethod.detail)")
                 }
                 .listRowBackground(Theme.card)
 

@@ -23,6 +23,32 @@ struct ProtocolTests {
         #expect(json["payload"]?["manifest"]?["signatures"]?.array?.first?["signature"]?.string?.hasSuffix("NQnAtw==") == true)
     }
 
+    @Test func pinPairingRequestUsesPinTypeAndSetPinEndpoint() throws {
+        let msg = SSAPRegistration.message(clientKey: nil, manifest: .current, pairingType: PairingMethod.pin.wireValue)
+        let json = try JSONDecoder().decode(JSONValue.self, from: Data(try msg.encoded().utf8))
+        #expect(json["payload"]?["pairingType"]?.string == "PIN")
+        #expect(SSAPEndpoint.setPin.uri == "ssap://pairing/setPin")
+        #expect(PairingMethod.prompt.wireValue == "PROMPT")
+    }
+
+    @Test func helloAdvertisesPairingTypes() {
+        var info = TVInfo()
+        #expect(info.supportsPinPairing == nil)
+        info.applyHello(["deviceOS": "webOS", "pairingTypes": ["PIN", "PROMPT", "COMBINED"]])
+        #expect(info.supportsPinPairing == true)
+        info.applyHello(["pairingTypes": ["PROMPT"]])
+        #expect(info.supportsPinPairing == false)
+    }
+
+    @Test func devicesSavedBeforePairingMethodStillDecode() throws {
+        // JSON written by version 1.0/1.1, which had no pairingMethod field.
+        let old = #"[{"id":"7A1F3C2E-1111-4222-8333-944455556666","name":"Living room","host":"192.168.1.54","transport":"automatic","macAddresses":[]}]"#
+        let devices = try JSONDecoder().decode([SavedDevice].self, from: Data(old.utf8))
+        #expect(devices.count == 1)
+        #expect(devices[0].pairingMethod == nil)
+        #expect(devices[0].effectivePairingMethod == .pin)
+    }
+
     @Test func decodesRegisteredReply() throws {
         let m = try SSAPMessage.decode(#"{"type":"registered","id":"register_0","payload":{"client-key":"k"}}"#)
         #expect(m.type == "registered")

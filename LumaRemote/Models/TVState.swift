@@ -13,11 +13,19 @@ nonisolated struct TVInfo: Equatable, Sendable {
     var macWiFi: String?
     var macWired: String?
     var services: [String] = []
+    /// Pairing types the TV advertises in `hello`, e.g. ["PIN", "PROMPT", "COMBINED"].
+    var pairingTypes: [String]?
+
+    /// nil when the TV didn't say (older firmware); we then just try.
+    var supportsPinPairing: Bool? { pairingTypes.map { $0.contains("PIN") } }
 
     mutating func applyHello(_ p: JSONValue?) {
         guard let p else { return }
         deviceOS = p["deviceOS"]?.string ?? deviceOS
         webOSVersion = p["deviceOSReleaseVersion"]?.string ?? p["deviceOSVersion"]?.string ?? webOSVersion
+        if let types = p["pairingTypes"]?.array?.compactMap({ $0.string?.uppercased() }), !types.isEmpty {
+            pairingTypes = types
+        }
     }
 
     mutating func applySystemInfo(_ p: JSONValue?) {

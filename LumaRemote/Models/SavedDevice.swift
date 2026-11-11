@@ -27,6 +27,23 @@ nonisolated enum TransportPreference: String, Codable, CaseIterable, Sendable, I
     }
 }
 
+/// How the TV confirms a new phone the first time.
+nonisolated enum PairingMethod: String, Codable, CaseIterable, Sendable, Identifiable {
+    /// The TV shows a code; you type it on the phone. No TV remote needed.
+    case pin
+    /// The TV asks "Allow this device?"; you accept with the TV remote.
+    case prompt
+
+    var id: String { rawValue }
+    var wireValue: String { self == .pin ? "PIN" : "PROMPT" }
+    var title: String { self == .pin ? "Code on TV" : "Accept on TV" }
+    var detail: String {
+        self == .pin
+            ? "The TV shows a code that you type on your iPhone. No TV remote needed."
+            : "The TV asks to allow the connection. You need the TV’s remote to press Accept."
+    }
+}
+
 /// A TV the user has added. The pairing key is NOT stored here — it lives in the
 /// Keychain, keyed by `id`.
 nonisolated struct SavedDevice: Codable, Identifiable, Hashable, Sendable {
@@ -43,6 +60,10 @@ nonisolated struct SavedDevice: Codable, Identifiable, Hashable, Sendable {
     var certificateFingerprint: String?
     var registrationManifest: String?
     var lastConnected: Date?
+    /// Optional so devices saved before this setting existed still decode.
+    var pairingMethod: PairingMethod?
+
+    var effectivePairingMethod: PairingMethod { pairingMethod ?? .pin }
 
     var displayName: String { name.isEmpty ? (modelName.map { "LG \($0)" } ?? "LG TV") : name }
 

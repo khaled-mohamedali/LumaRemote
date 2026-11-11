@@ -38,6 +38,7 @@ final class RemoteViewModel {
         case .idle: return service.device == nil ? "No TV" : "Not connected"
         case .connecting(let step): return step
         case .awaitingPairing: return "Accept on TV"
+        case .awaitingPin: return "Enter TV code"
         case .connected: return "Connected"
         case .reconnecting: return "Reconnecting…"
         case .tvOff: return "TV is off"

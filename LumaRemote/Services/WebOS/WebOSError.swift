@@ -14,6 +14,7 @@ nonisolated enum WebOSError: Error, Sendable, Equatable, LocalizedError {
     case pairingRejected
     case pairingTimedOut
     case pairingFailed(String)
+    case pinIncorrect
     case notConnected
     case unsupported(String)
     case permissionDenied(String)
@@ -45,6 +46,8 @@ nonisolated enum WebOSError: Error, Sendable, Equatable, LocalizedError {
             return "The pairing request was declined on the TV. Try again and choose “Accept” with your TV remote."
         case .pairingTimedOut:
             return "No response to the pairing prompt. Try again and accept the request on your TV."
+        case .pinIncorrect:
+            return "That code didn’t match the one on your TV. Try again with a new code."
         case .pairingFailed(let reason):
             return "Pairing failed: \(reason)"
         case .notConnected:
