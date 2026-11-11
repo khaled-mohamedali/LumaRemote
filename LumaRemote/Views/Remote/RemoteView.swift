@@ -83,8 +83,11 @@ struct RemoteView: View {
         }
         .padding(.horizontal, 12)
 
-        DPadView { vm.press($0) }
+        NavigationStylePicker(style: navigationStyle)
+        NavigationArea(style: app.preferences.navigationStyle) { vm.press($0) }
             .padding(.vertical, 4)
+            .transition(.opacity)
+            .animation(.easeInOut(duration: 0.2), value: app.preferences.navigationStyle)
 
         // Back · Keyboard · Input
         HStack {
@@ -135,6 +138,11 @@ struct RemoteView: View {
         if vm.hasMediaControls { PlaybackBar() }
 
         if vm.showsShortcuts { ShortcutRow() }
+    }
+
+    private var navigationStyle: Binding<NavigationStyle> {
+        Binding(get: { app.preferences.navigationStyle },
+                set: { app.preferences.navigationStyle = $0 })
     }
 
     private var volumeTitle: String {

@@ -8,9 +8,6 @@ import SwiftUI
 struct KeyboardView: View {
     @Environment(AppModel.self) private var app
     @FocusState private var focused: Bool
-    @AppStorage("keyboard.navStyle") private var navStyle: NavStyle = .swipe
-
-    enum NavStyle: String { case swipe, buttons }
 
     var body: some View {
         @Bindable var vm = app.keyboard
@@ -80,13 +77,10 @@ struct KeyboardView: View {
                title: "\(name) uses its own keyboard",
                text: "Typed text can’t reach it. Use the swipe pad to pick letters on its on-screen keyboard, or try a direct search below.")
 
-        Picker("Navigation", selection: $navStyle) {
-            Text("Swipe pad").tag(NavStyle.swipe)
-            Text("Buttons").tag(NavStyle.buttons)
-        }
-        .pickerStyle(.segmented)
+        @Bindable var prefs = app.preferences
+        NavigationStylePicker(style: $prefs.navigationStyle)
 
-        if navStyle == .swipe {
+        if prefs.navigationStyle == .swipe {
             SwipePad { app.remote.press($0) }
                 .frame(height: 260)
         } else {

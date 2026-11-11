@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Touch-pad style navigation for apps that draw their own on-screen keyboard
-/// (Netflix, Prime Video…). Every `step` points of finger travel sends one arrow key,
+/// Touch-pad style navigation, used on the main remote (if chosen) and for apps that
+/// draw their own on-screen keyboard (Netflix, Prime Video…). Every `step` points of finger travel sends one arrow key,
 /// so a short swipe moves one key and a long drag keeps moving; a tap sends OK.
 /// Only the dominant axis counts, so slightly diagonal swipes don't wander.
 struct SwipePad: View {
@@ -93,6 +93,57 @@ struct SwipePad: View {
             try? await Task.sleep(for: .milliseconds(350))
             guard !Task.isCancelled else { return }
             flashed = nil
+        }
+    }
+}
+
+/// Two-option switch between the arrow ring and the swipe pad.
+struct NavigationStylePicker: View {
+    @Binding var style: NavigationStyle
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(NavigationStyle.allCases) { option in
+                Button {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { style = option }
+                } label: {
+                    Label(option.title, systemImage: option.symbol)
+                        .font(.footnote.weight(.semibold))
+                        .padding(.horizontal, 14)
+                        .frame(height: 34)
+                        .foregroundStyle(style == option ? .white : Theme.textSecondary)
+                        .background {
+                            if style == option {
+                                Capsule().fill(Theme.accentDeep)
+                            }
+                        }
+                        .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(style == option ? .isSelected : [])
+            }
+        }
+        .padding(4)
+        .background(Capsule().fill(Theme.card))
+        .overlay(Capsule().strokeBorder(Theme.stroke))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Navigation style")
+    }
+}
+
+/// The remote's centre area: arrow ring or swipe pad, per the user's choice.
+struct NavigationArea: View {
+    let style: NavigationStyle
+    let onKey: (RemoteKey) -> Void
+
+    var body: some View {
+        switch style {
+        case .buttons:
+            DPadView(onKey: onKey)
+        case .swipe:
+            SwipePad(onKey: onKey)
+                .frame(maxWidth: .infinity)
+                .frame(height: 270)
         }
     }
 }

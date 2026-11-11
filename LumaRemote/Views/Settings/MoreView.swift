@@ -85,6 +85,11 @@ struct PreferencesView: View {
         Form {
             Section {
                 Toggle("Haptic feedback", isOn: $prefs.hapticsEnabled)
+                Picker("Navigation", selection: $prefs.navigationStyle) {
+                    ForEach(NavigationStyle.allCases) { Text($0.title).tag($0) }
+                }
+            } footer: {
+                Text("Arrows: the ring with OK in the middle, like the TV remote. Swipe pad: swipe to move one item per swipe, tap to select. You can also switch right on the remote.")
             }
             .listRowBackground(Theme.card)
             Section {
